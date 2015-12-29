@@ -6,7 +6,8 @@ Set up the latest version of [HAProxy](http://www.haproxy.org/) in Ubuntu system
 
 #### Requirements
 
-* `python-apt`
+* `epel-release`
+* `socat`
 
 #### Variables
 
@@ -20,7 +21,6 @@ Set up the latest version of [HAProxy](http://www.haproxy.org/) in Ubuntu system
 * `haproxy_global_log.{n}.format`: [optional]: Specifies the log format string to use for traffic logs (e.g. `%{+Q}o\ %t\ %s\ %{-Q}r`)
 * `haproxy_global_chroot`: [default: `/var/lib/haproxy`]: Changes current directory to `<jail dir>` and performs a `chroot()` there before dropping privileges
 * `haproxy_global_stats`: [default: See `defaults/main.yml`]: Stats declarations
-* `haproxy_global_stats.sockets`:  [default: `[{listen: "{{ '/run/haproxy/admin.sock' if ansible_distribution_version | version_compare('12.04', '>=') else '/var/run/haproxy/admin.sock' }}"}]`]: Sockets declarations
 * `haproxy_global_stats.sockets.{n}.listen`:  [required]: Defines a listening address and/or ports (e.g. `/run/haproxy/admin.sock`)
 * `haproxy_global_stats.sockets.{n}.param`:  [optional]: A list of parameters common to this bind declarations (e.g. `['mode 660', 'level admin', 'process 1']`)
 * `haproxy_global_stats.timeout`:  [optional]: The default timeout on the stats socket
@@ -178,7 +178,7 @@ None
         default_backend: webservers
       - name: https
         description: Front-end for all HTTPS traffic
-        bind: 
+        bind:
           - listen: "{{ ansible_eth0['ipv4']['address'] }}:443"
             param:
               - ssl
@@ -418,6 +418,63 @@ None
               - backup
 ```
 
+WCW
+
+```yaml
+- hosts: all
+  roles:
+    - haproxy
+  vars:
+
+   haproxy_listen:
+     - name: stats
+       description: Global statistics
+       bind:
+         - listen: '*:80'
+       mode: http
+       stats:
+         enable: true
+         uri: /
+         hide_version: true
+         refresh: 15s
+         auth:
+           - user: admin
+             passwd: 'NqXgKWQ9f9Et'
+
+     - name: Test
+       description: Test Listen
+       bind:
+        - listen: '*:80'
+       mode: http
+       server:
+        - name: test.hostname
+          listen: 127.0.0.1:8080
+          param:
+            - maxconn 150
+            - check
+        - name: test2.hostname
+          listen: 127.0.0.1:8080
+          param:
+            - check
+
+        - name: ssl test
+          description: Test Listen
+          bind:
+           - listen: '*:443'
+          mode: https
+          server:
+           - name: ssl.hostname
+             listen: 127.0.0.1:4443
+             param:
+               - maxconn 150
+               - check
+           - name: ssl2.hostname
+             listen: 127.0.0.1:4443
+             param:
+               - check
+
+```
+
 #### License
 
 MIT
@@ -425,6 +482,7 @@ MIT
 #### Author Information
 
 Mischa ter Smitten (based on work of [FloeDesignTechnologies](https://github.com/FloeDesignTechnologies))
+Michael Travis - Modified to work for CentOS 7+
 
 #### Feedback, bug-reports, requests, ...
 

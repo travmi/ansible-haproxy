@@ -1,20 +1,18 @@
 # tasks file for haproxy
 ---
-- name: add repository from PPA and install its signing key
-  apt_repository:
-    repo: "{{ haproxy_ppa }}"
-    update_cache: true
-  tags: [configuration, haproxy, haproxy-add-repository]
+# Epel Repository
+- name: add yum repository
+  yum: name=epel-release state=latest
 
 - name: install dependencies
-  apt:
+  yum:
     name: "{{ item }}"
     state: latest
   with_items: haproxy_dependencies
   tags: [configuration, haproxy, haproxy-dependencies]
 
 - name: install
-  apt:
+  yum:
     name: "{{ item }}"
     state: latest
   with_items: haproxy_install
@@ -41,6 +39,11 @@
   notify: restart haproxy
   tags: [configuration, haproxy, haproxy-configuration, haproxy-configuration-ssl]
 
+- name: copy error files
+  copy: src={{ item.code }}.http dest=/etc/haproxy/errors/
+  with_items: haproxy_defaults_errorfile
+  notify: restart haproxy
+
 - name: update configuration file
   template:
     src: etc/haproxy/haproxy.cfg.j2
@@ -57,4 +60,7 @@
     name: haproxy
     state: started
     enabled: true
+  register: status
   tags: [configuration, haproxy, haproxy-start-enable-service]
+
+- debug: var=status
